@@ -33,8 +33,14 @@ export default function Dashboard() {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth() + 1;
 
-  const { records, baseCapital, saveRecord, deleteRecord, updateBaseCapital, clearAllData } =
-    useProfitData();
+  const {
+    records,
+    baseCapital,
+    saveRecord,
+    deleteRecord,
+    updateBaseCapital,
+    clearAllData,
+  } = useProfitData();
 
   // 計算當月統計
   const monthlyStats = useMemo(() => {
@@ -405,38 +411,32 @@ export default function Dashboard() {
                     activeOpacity={0.7}
                   >
                     <Text style={styles.dayNumber}>{dayData.day}</Text>
-                    <Text
-                      style={[
-                        styles.dayAmount,
-                        {
-                          color:
-                            dayData.amount === 0 && !dayData.hasRecord
-                              ? "#666"
-                              : color,
-                        },
-                      ]}
-                    >
-                      {dayData.amount === 0 && !dayData.hasRecord
-                        ? "+0.00"
-                        : Math.abs(dayData.amount) >= 10000
-                        ? formatWan(dayData.amount)
-                        : formatNTD(dayData.amount)}
-                    </Text>
-                    <Text
-                      style={[
-                        styles.dayPercent,
-                        {
-                          color:
-                            dayData.amount === 0 && !dayData.hasRecord
-                              ? "#666"
-                              : color,
-                        },
-                      ]}
-                    >
-                      {dayData.amount === 0 && !dayData.hasRecord
-                        ? "+0.00%"
-                        : formatPercent(dayData.percent)}
-                    </Text>
+                    {(dayData.amount !== 0 || dayData.hasRecord) && (
+                      <Text
+                        style={[
+                          styles.dayAmount,
+                          {
+                            color: color,
+                          },
+                        ]}
+                      >
+                        {Math.abs(dayData.amount) >= 10000
+                          ? formatWan(dayData.amount)
+                          : formatNTD(dayData.amount)}
+                      </Text>
+                    )}
+                    {(dayData.amount !== 0 || dayData.hasRecord) && (
+                      <Text
+                        style={[
+                          styles.dayPercent,
+                          {
+                            color: color,
+                          },
+                        ]}
+                      >
+                        {formatPercent(dayData.percent)}
+                      </Text>
+                    )}
                   </TouchableOpacity>
                 );
               })}
@@ -471,38 +471,32 @@ export default function Dashboard() {
                   <Text style={styles.monthNumber}>
                     {monthNames[monthData.month - 1]}
                   </Text>
-                  <Text
-                    style={[
-                      styles.monthAmount,
-                      {
-                        color:
-                          monthData.amount === 0 && !monthData.hasRecord
-                            ? "#666"
-                            : color,
-                      },
-                    ]}
-                  >
-                    {monthData.amount === 0 && !monthData.hasRecord
-                      ? "+0.00"
-                      : Math.abs(monthData.amount) >= 10000
-                      ? formatWan(monthData.amount)
-                      : formatNTD(monthData.amount)}
-                  </Text>
-                  <Text
-                    style={[
-                      styles.monthPercent,
-                      {
-                        color:
-                          monthData.amount === 0 && !monthData.hasRecord
-                            ? "#666"
-                            : color,
-                      },
-                    ]}
-                  >
-                    {monthData.amount === 0 && !monthData.hasRecord
-                      ? "+0.00%"
-                      : formatPercent(monthData.percent)}
-                  </Text>
+                  {(monthData.amount !== 0 || monthData.hasRecord) && (
+                    <Text
+                      style={[
+                        styles.monthAmount,
+                        {
+                          color: color,
+                        },
+                      ]}
+                    >
+                      {Math.abs(monthData.amount) >= 10000
+                        ? formatWan(monthData.amount)
+                        : formatNTD(monthData.amount)}
+                    </Text>
+                  )}
+                  {(monthData.amount !== 0 || monthData.hasRecord) && (
+                    <Text
+                      style={[
+                        styles.monthPercent,
+                        {
+                          color: color,
+                        },
+                      ]}
+                    >
+                      {formatPercent(monthData.percent)}
+                    </Text>
+                  )}
                 </TouchableOpacity>
               );
             })
