@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from "react";
+import React, { useState, useMemo, useRef, useEffect } from "react";
 import {
   View,
   Text,
@@ -26,6 +26,9 @@ export default function Dashboard() {
   const [inputNote, setInputNote] = useState("");
   const [showSettings, setShowSettings] = useState(false);
   const [baseCapitalInput, setBaseCapitalInput] = useState("");
+  const [showYearPicker, setShowYearPicker] = useState(false);
+
+  const yearPickerScrollRef = useRef(null);
 
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth() + 1;
@@ -181,22 +184,70 @@ export default function Dashboard() {
     setBaseCapitalInput("");
   };
 
+  const handleYearSelect = (selectedYear) => {
+    const newDate = new Date(selectedYear, currentDate.getMonth(), 1);
+    setCurrentDate(newDate);
+    setShowYearPicker(false);
+  };
+
   // 月份選擇器資料
   const months = Array.from({ length: 12 }, (_, i) => ({
     value: i,
     label: `${year}/${String(i + 1).padStart(2, "0")}`,
   }));
 
+  // 年份選擇器資料 (2023-2030)
+  const years = Array.from({ length: 10 }, (_, i) => {
+    const yearValue = 2024 + i;
+    return {
+      value: yearValue,
+      label: String(yearValue),
+    };
+  });
+
+  // 當年份選擇器開啟時，自動滾動到當前年份
+  useEffect(() => {
+    if (showYearPicker && yearPickerScrollRef.current) {
+      // 延遲一點時間確保模態框完全渲染
+      setTimeout(() => {
+        // 計算當前年份在列表中的位置
+        const currentYearIndex = years.findIndex((y) => y.value === year);
+        if (currentYearIndex !== -1) {
+          // 每個 item 高度約為 54px (padding 16*2 + text height + margin)
+          const itemHeight = 54;
+          const scrollPosition = currentYearIndex * itemHeight;
+          // 滾動到位置，但要考慮到容器高度，讓當前年份居中顯示
+          const containerHeight = 300; // yearPickerScroll maxHeight
+          const centeredPosition = Math.max(
+            0,
+            scrollPosition - containerHeight / 2 + itemHeight / 2
+          );
+
+          yearPickerScrollRef.current.scrollTo({
+            y: centeredPosition,
+            animated: true,
+          });
+        }
+      }, 100);
+    }
+  }, [showYearPicker, year, years]);
+
   return (
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.monthSelector}>
+        <TouchableOpacity
+          style={styles.monthSelector}
+          onPress={
+            viewMode === "year" ? () => setShowYearPicker(true) : undefined
+          }
+        >
           <Text style={styles.monthText}>
             {viewMode === "month"
               ? format(currentDate, "yyyy/MM")
               : String(year)}
           </Text>
+          {viewMode === "year" && <Text style={styles.dropdownIcon}>▼</Text>}
         </TouchableOpacity>
 
         <View style={styles.viewToggle}>
@@ -563,6 +614,55 @@ export default function Dashboard() {
           </View>
         </View>
       </Modal>
+
+      {/* Year Picker Modal */}
+      <Modal
+        visible={showYearPicker}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowYearPicker(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>選擇年份</Text>
+
+            <ScrollView
+              ref={yearPickerScrollRef}
+              style={styles.yearPickerScroll}
+              showsVerticalScrollIndicator={false}
+            >
+              {years.map((yearItem) => (
+                <TouchableOpacity
+                  key={yearItem.value}
+                  style={[
+                    styles.yearPickerItem,
+                    yearItem.value === year && styles.yearPickerItemSelected,
+                  ]}
+                  onPress={() => handleYearSelect(yearItem.value)}
+                >
+                  <Text
+                    style={[
+                      styles.yearPickerText,
+                      yearItem.value === year && styles.yearPickerTextSelected,
+                    ]}
+                  >
+                    {yearItem.label}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+
+            <View style={styles.modalButtons}>
+              <TouchableOpacity
+                style={styles.btnCancel}
+                onPress={() => setShowYearPicker(false)}
+              >
+                <Text style={styles.btnCancelText}>取消</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -588,6 +688,11 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 18,
     fontWeight: "600",
+  },
+  dropdownIcon: {
+    color: "#666",
+    fontSize: 12,
+    marginLeft: 4,
   },
   capitalSection: {
     paddingHorizontal: 16,
@@ -831,6 +936,28 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   btnSaveText: {
+    color: "#000",
+    fontWeight: "600",
+  },
+  yearPickerScroll: {
+    maxHeight: 300,
+    marginVertical: 16,
+  },
+  yearPickerItem: {
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    marginVertical: 2,
+  },
+  yearPickerItemSelected: {
+    backgroundColor: "#00C853",
+  },
+  yearPickerText: {
+    color: "#fff",
+    fontSize: 16,
+    textAlign: "center",
+  },
+  yearPickerTextSelected: {
     color: "#000",
     fontWeight: "600",
   },
