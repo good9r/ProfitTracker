@@ -18,5 +18,16 @@
     "react-native": "0.81.5",
     "react-native-web": "^0.21.0"
   },
-  "private": true
+  "private": true,
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/good9r/ProfitTracker.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/good9r/ProfitTracker/issues"
+  },
+  "homepage": "https://github.com/good9r/ProfitTracker#readme",
+  "description": ""
 }

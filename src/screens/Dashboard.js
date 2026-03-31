@@ -19,7 +19,9 @@ import {
 } from "../utils/formatter";
 
 export default function Dashboard() {
-  const [currentDate, setCurrentDate] = useState(new Date(2025, 5, 1)); // 2025/06
+  const [currentDate, setCurrentDate] = useState(
+    () => new Date(new Date().getFullYear(), new Date().getMonth(), 1)
+  );
   const [viewMode, setViewMode] = useState("month"); // 'month' | 'year'
   const [selectedDay, setSelectedDay] = useState(null);
   const [inputAmount, setInputAmount] = useState("");
