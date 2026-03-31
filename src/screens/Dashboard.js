@@ -191,12 +191,12 @@ export default function Dashboard() {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.monthSelector}
-          onPress={() => setShowSettings(true)}
-        >
-          <Text style={styles.monthText}>{format(currentDate, "yyyy/MM")}</Text>
-          <Text style={styles.dropdownIcon}>▼</Text>
+        <TouchableOpacity style={styles.monthSelector}>
+          <Text style={styles.monthText}>
+            {viewMode === "month"
+              ? format(currentDate, "yyyy/MM")
+              : String(year)}
+          </Text>
         </TouchableOpacity>
 
         <View style={styles.viewToggle}>
@@ -265,6 +265,23 @@ export default function Dashboard() {
           </Text>
         </View>
       </View>
+
+      {/* Capital Settings - Only show in year view */}
+      {viewMode === "year" && (
+        <View style={styles.capitalSection}>
+          <View style={styles.capitalInfo}>
+            <Text style={styles.capitalLabel}>
+              本金：{formatNTD(baseCapital)}
+            </Text>
+            <TouchableOpacity
+              style={styles.capitalButton}
+              onPress={() => setShowSettings(true)}
+            >
+              <Text style={styles.capitalButtonText}>設定</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
 
       {/* Calendar Header */}
       {viewMode === "month" && (
@@ -572,10 +589,31 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "600",
   },
-  dropdownIcon: {
-    color: "#666",
+  capitalSection: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#2A2A2A",
+  },
+  capitalInfo: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  capitalLabel: {
+    color: "#999",
+    fontSize: 14,
+  },
+  capitalButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: "#2A2A2A",
+    borderRadius: 6,
+  },
+  capitalButtonText: {
+    color: "#fff",
     fontSize: 12,
-    marginLeft: 4,
+    fontWeight: "500",
   },
   viewToggle: {
     flexDirection: "row",
