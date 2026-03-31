@@ -38,6 +38,7 @@ export default function Dashboard() {
     const daysInMonth = getDaysInMonth(currentDate);
     const firstDayOfWeek = getDay(startOfMonth(currentDate)); // 0 = Sunday
     let totalProfit = 0;
+    let currentAssets = baseCapital; // 初始總資產為本金
     const dailyData = [];
 
     for (let d = 1; d <= daysInMonth; d++) {
@@ -46,9 +47,18 @@ export default function Dashboard() {
       ).padStart(2, "0")}`;
       const record = records[dateKey];
       const amount = record ? record.amount : 0;
-      const percent = baseCapital > 0 ? (amount / baseCapital) * 100 : 0;
+
+      // 計算單日收益率 = 今日收益 / 昨日總資產 × 100
+      // 使用昨日總資產的絕對值來計算百分比，保持收益的正負號
+      const percent =
+        Math.abs(currentAssets) > 0
+          ? (amount / Math.abs(currentAssets)) * 100
+          : 0;
 
       totalProfit += amount;
+      // 更新總資產：昨日總資產 + 今日收益
+      currentAssets += amount;
+
       dailyData.push({
         day: d,
         date: dateKey,
@@ -56,6 +66,7 @@ export default function Dashboard() {
         percent,
         hasRecord: !!record,
         note: record?.note || "",
+        totalAssets: currentAssets, // 新增總資產欄位
       });
     }
 
@@ -68,6 +79,7 @@ export default function Dashboard() {
       dailyData,
       padding,
       maxAmount: Math.max(...dailyData.map((d) => Math.abs(d.amount)), 1),
+      finalAssets: currentAssets, // 新增最終總資產
     };
   }, [records, currentDate, baseCapital, year, month]);
 
@@ -237,7 +249,9 @@ export default function Dashboard() {
                 >
                   {dayData.amount === 0 && !dayData.hasRecord
                     ? "+0.00"
-                    : formatWan(dayData.amount)}
+                    : Math.abs(dayData.amount) >= 10000
+                    ? formatWan(dayData.amount)
+                    : formatNTD(dayData.amount)}
                 </Text>
                 <Text
                   style={[
