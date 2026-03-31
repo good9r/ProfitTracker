@@ -83,6 +83,15 @@ export function useProfitData() {
     [persistData]
   );
 
+  const clearAllData = useCallback(async () => {
+    try {
+      await AsyncStorage.removeItem(STORAGE_KEY);
+      setData(defaultData);
+    } catch (e) {
+      console.error("Failed to clear data", e);
+    }
+  }, []);
+
   return {
     records: data.records,
     baseCapital: data.settings.base_capital,
@@ -90,5 +99,6 @@ export function useProfitData() {
     saveRecord,
     deleteRecord,
     updateBaseCapital,
+    clearAllData,
   };
 }

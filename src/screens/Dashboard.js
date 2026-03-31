@@ -33,7 +33,7 @@ export default function Dashboard() {
   const year = currentDate.getFullYear();
   const month = currentDate.getMonth() + 1;
 
-  const { records, baseCapital, saveRecord, deleteRecord, updateBaseCapital } =
+  const { records, baseCapital, saveRecord, deleteRecord, updateBaseCapital, clearAllData } =
     useProfitData();
 
   // 計算當月統計
@@ -208,6 +208,14 @@ export default function Dashboard() {
     }
     setShowSettings(false);
     setBaseCapitalInput("");
+  };
+
+  const handleClearAllData = async () => {
+    if (window.confirm("確定要清除所有數據嗎？此操作無法復原。")) {
+      await clearAllData();
+      setShowSettings(false);
+      setBaseCapitalInput("");
+    }
   };
 
   const handleYearSelect = (selectedYear) => {
@@ -623,6 +631,13 @@ export default function Dashboard() {
             </Text>
             <Text style={styles.helperText}>收益率以此計算</Text>
 
+            <TouchableOpacity
+              style={styles.btnClear}
+              onPress={handleClearAllData}
+            >
+              <Text style={styles.btnClearText}>清除所有數據</Text>
+            </TouchableOpacity>
+
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={styles.btnCancel}
@@ -964,6 +979,18 @@ const styles = StyleSheet.create({
   btnSaveText: {
     color: "#000",
     fontWeight: "600",
+  },
+  btnClear: {
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: "#3A1A1A",
+    alignItems: "center",
+    marginTop: 16,
+    marginBottom: 8,
+  },
+  btnClearText: {
+    color: "#FF5252",
+    fontWeight: "500",
   },
   yearPickerScroll: {
     maxHeight: 300,
