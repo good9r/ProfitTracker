@@ -49,6 +49,9 @@ export default function Dashboard() {
         let monthHasRecord = false;
         const daysInMonth = getDaysInMonth(new Date(year, m - 1, 1));
 
+        // 記錄月初資產（用於計算收益率）
+        const monthStartAssets = currentAssets;
+
         // 計算該月總收益
         for (let d = 1; d <= daysInMonth; d++) {
           const dateKey = `${year}-${String(m).padStart(2, "0")}-${String(
@@ -63,11 +66,12 @@ export default function Dashboard() {
 
         // 計算月收益率（基於月初資產）
         const monthPercent =
-          Math.abs(currentAssets) > 0
-            ? (monthProfit / Math.abs(currentAssets)) * 100
+          Math.abs(monthStartAssets) > 0
+            ? (monthProfit / Math.abs(monthStartAssets)) * 100
             : 0;
 
         yearTotalProfit += monthProfit;
+        // 更新累計資產
         currentAssets += monthProfit;
 
         yearData.push({
@@ -88,11 +92,29 @@ export default function Dashboard() {
         finalAssets: currentAssets,
       };
     } else {
-      // 月視圖：原有的日期計算邏輯
+      // 月視圖：需要計算到當前月份的累計資產
       const daysInMonth = getDaysInMonth(currentDate);
       const firstDayOfWeek = getDay(startOfMonth(currentDate)); // 0 = Sunday
       let totalProfit = 0;
-      let currentAssets = baseCapital; // 初始總資產為本金
+
+      // 計算當月開始時的累計資產（本金 + 之前所有月份的收益）
+      let monthStartAssets = baseCapital;
+
+      // 累加當前年份中當前月份之前的所有收益
+      for (let m = 1; m < month; m++) {
+        const daysInPrevMonth = getDaysInMonth(new Date(year, m - 1, 1));
+        for (let d = 1; d <= daysInPrevMonth; d++) {
+          const prevDateKey = `${year}-${String(m).padStart(2, "0")}-${String(
+            d
+          ).padStart(2, "0")}`;
+          const prevRecord = records[prevDateKey];
+          if (prevRecord) {
+            monthStartAssets += prevRecord.amount;
+          }
+        }
+      }
+
+      let currentAssets = monthStartAssets; // 當月開始時的總資產
       const dailyData = [];
 
       for (let d = 1; d <= daysInMonth; d++) {
@@ -102,11 +124,14 @@ export default function Dashboard() {
         const record = records[dateKey];
         const amount = record ? record.amount : 0;
 
+        // 記錄當日開始時的資產（昨日總資產）
+        const dayStartAssets = currentAssets;
+
         // 計算單日收益率 = 今日收益 / 昨日總資產 × 100
         // 使用昨日總資產的絕對值來計算百分比，保持收益的正負號
         const percent =
-          Math.abs(currentAssets) > 0
-            ? (amount / Math.abs(currentAssets)) * 100
+          Math.abs(dayStartAssets) > 0
+            ? (amount / Math.abs(dayStartAssets)) * 100
             : 0;
 
         totalProfit += amount;
@@ -129,7 +154,8 @@ export default function Dashboard() {
 
       return {
         totalProfit,
-        totalPercent: baseCapital > 0 ? (totalProfit / baseCapital) * 100 : 0,
+        totalPercent:
+          monthStartAssets > 0 ? (totalProfit / monthStartAssets) * 100 : 0,
         dailyData,
         padding,
         maxAmount: Math.max(...dailyData.map((d) => Math.abs(d.amount)), 1),
