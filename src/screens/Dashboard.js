@@ -35,53 +35,112 @@ export default function Dashboard() {
 
   // 計算當月統計
   const monthlyStats = useMemo(() => {
-    const daysInMonth = getDaysInMonth(currentDate);
-    const firstDayOfWeek = getDay(startOfMonth(currentDate)); // 0 = Sunday
-    let totalProfit = 0;
-    let currentAssets = baseCapital; // 初始總資產為本金
-    const dailyData = [];
+    if (viewMode === "year") {
+      // 年視圖：計算12個月的數據
+      const yearData = [];
+      let yearTotalProfit = 0;
+      let currentAssets = baseCapital;
 
-    for (let d = 1; d <= daysInMonth; d++) {
-      const dateKey = `${year}-${String(month).padStart(2, "0")}-${String(
-        d
-      ).padStart(2, "0")}`;
-      const record = records[dateKey];
-      const amount = record ? record.amount : 0;
+      for (let m = 1; m <= 12; m++) {
+        let monthProfit = 0;
+        let monthHasRecord = false;
+        const daysInMonth = getDaysInMonth(new Date(year, m - 1, 1));
 
-      // 計算單日收益率 = 今日收益 / 昨日總資產 × 100
-      // 使用昨日總資產的絕對值來計算百分比，保持收益的正負號
-      const percent =
-        Math.abs(currentAssets) > 0
-          ? (amount / Math.abs(currentAssets)) * 100
-          : 0;
+        // 計算該月總收益
+        for (let d = 1; d <= daysInMonth; d++) {
+          const dateKey = `${year}-${String(m).padStart(2, "0")}-${String(
+            d
+          ).padStart(2, "0")}`;
+          const record = records[dateKey];
+          if (record) {
+            monthProfit += record.amount;
+            monthHasRecord = true;
+          }
+        }
 
-      totalProfit += amount;
-      // 更新總資產：昨日總資產 + 今日收益
-      currentAssets += amount;
+        // 計算月收益率（基於月初資產）
+        const monthPercent =
+          Math.abs(currentAssets) > 0
+            ? (monthProfit / Math.abs(currentAssets)) * 100
+            : 0;
 
-      dailyData.push({
-        day: d,
-        date: dateKey,
-        amount,
-        percent,
-        hasRecord: !!record,
-        note: record?.note || "",
-        totalAssets: currentAssets, // 新增總資產欄位
-      });
+        yearTotalProfit += monthProfit;
+        currentAssets += monthProfit;
+
+        yearData.push({
+          month: m,
+          amount: monthProfit,
+          percent: monthPercent,
+          hasRecord: monthHasRecord,
+          totalAssets: currentAssets,
+        });
+      }
+
+      return {
+        totalProfit: yearTotalProfit,
+        totalPercent:
+          baseCapital > 0 ? (yearTotalProfit / baseCapital) * 100 : 0,
+        yearData,
+        maxAmount: Math.max(...yearData.map((m) => Math.abs(m.amount)), 1),
+        finalAssets: currentAssets,
+      };
+    } else {
+      // 月視圖：原有的日期計算邏輯
+      const daysInMonth = getDaysInMonth(currentDate);
+      const firstDayOfWeek = getDay(startOfMonth(currentDate)); // 0 = Sunday
+      let totalProfit = 0;
+      let currentAssets = baseCapital; // 初始總資產為本金
+      const dailyData = [];
+
+      for (let d = 1; d <= daysInMonth; d++) {
+        const dateKey = `${year}-${String(month).padStart(2, "0")}-${String(
+          d
+        ).padStart(2, "0")}`;
+        const record = records[dateKey];
+        const amount = record ? record.amount : 0;
+
+        // 計算單日收益率 = 今日收益 / 昨日總資產 × 100
+        // 使用昨日總資產的絕對值來計算百分比，保持收益的正負號
+        const percent =
+          Math.abs(currentAssets) > 0
+            ? (amount / Math.abs(currentAssets)) * 100
+            : 0;
+
+        totalProfit += amount;
+        // 更新總資產：昨日總資產 + 今日收益
+        currentAssets += amount;
+
+        dailyData.push({
+          day: d,
+          date: dateKey,
+          amount,
+          percent,
+          hasRecord: !!record,
+          note: record?.note || "",
+          totalAssets: currentAssets, // 新增總資產欄位
+        });
+      }
+
+      // 補前空白
+      const padding = Array(firstDayOfWeek).fill(null);
+
+      return {
+        totalProfit,
+        totalPercent: baseCapital > 0 ? (totalProfit / baseCapital) * 100 : 0,
+        dailyData,
+        padding,
+        maxAmount: Math.max(...dailyData.map((d) => Math.abs(d.amount)), 1),
+        finalAssets: currentAssets, // 新增最終總資產
+      };
     }
+  }, [records, currentDate, baseCapital, year, month, viewMode]);
 
-    // 補前空白
-    const padding = Array(firstDayOfWeek).fill(null);
-
-    return {
-      totalProfit,
-      totalPercent: baseCapital > 0 ? (totalProfit / baseCapital) * 100 : 0,
-      dailyData,
-      padding,
-      maxAmount: Math.max(...dailyData.map((d) => Math.abs(d.amount)), 1),
-      finalAssets: currentAssets, // 新增最終總資產
-    };
-  }, [records, currentDate, baseCapital, year, month]);
+  const handleMonthPress = (monthNum) => {
+    // 年視圖中點擊月份，切換到該月的月視圖
+    const newDate = new Date(year, monthNum - 1, 1);
+    setCurrentDate(newDate);
+    setViewMode("month");
+  };
 
   const handleDayPress = (dayData) => {
     setSelectedDay(dayData);
@@ -179,7 +238,11 @@ export default function Dashboard() {
       {/* Summary */}
       <View style={styles.summary}>
         <View style={styles.summaryLeft}>
-          <Text style={styles.summaryLabel}>6月收益 · NTD</Text>
+          <Text style={styles.summaryLabel}>
+            {viewMode === "month"
+              ? `${month}月收益 · NTD`
+              : `${year}年收益 · NTD`}
+          </Text>
           <Text
             style={[
               styles.summaryAmount,
@@ -204,13 +267,15 @@ export default function Dashboard() {
       </View>
 
       {/* Calendar Header */}
-      <View style={styles.weekdayHeader}>
-        {["日", "一", "二", "三", "四", "五", "六"].map((d) => (
-          <Text key={d} style={styles.weekdayText}>
-            {d}
-          </Text>
-        ))}
-      </View>
+      {viewMode === "month" && (
+        <View style={styles.weekdayHeader}>
+          {["日", "一", "二", "三", "四", "五", "六"].map((d) => (
+            <Text key={d} style={styles.weekdayText}>
+              {d}
+            </Text>
+          ))}
+        </View>
+      )}
 
       <ScrollView
         style={styles.scrollView}
@@ -218,70 +283,152 @@ export default function Dashboard() {
       >
         {/* Calendar Grid */}
         <View style={styles.calendarGrid}>
-          {/* Padding days */}
-          {monthlyStats.padding.map((_, idx) => (
-            <View key={`pad-${idx}`} style={styles.dayCell} />
-          ))}
+          {viewMode === "month" ? (
+            <>
+              {/* Padding days */}
+              {monthlyStats.padding?.map((_, idx) => (
+                <View key={`pad-${idx}`} style={styles.dayCell} />
+              ))}
 
-          {/* Actual days */}
-          {monthlyStats.dailyData.map((dayData) => {
-            const isProfit = dayData.amount >= 0;
-            const color = isProfit ? "#00C853" : "#FF5252";
+              {/* Actual days */}
+              {monthlyStats.dailyData?.map((dayData) => {
+                const isProfit = dayData.amount >= 0;
+                const color = isProfit ? "#00C853" : "#FF5252";
 
-            return (
-              <TouchableOpacity
-                key={dayData.day}
-                style={styles.dayCell}
-                onPress={() => handleDayPress(dayData)}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.dayNumber}>{dayData.day}</Text>
-                <Text
-                  style={[
-                    styles.dayAmount,
-                    {
-                      color:
-                        dayData.amount === 0 && !dayData.hasRecord
-                          ? "#666"
-                          : color,
-                    },
-                  ]}
+                return (
+                  <TouchableOpacity
+                    key={dayData.day}
+                    style={styles.dayCell}
+                    onPress={() => handleDayPress(dayData)}
+                    activeOpacity={0.7}
+                  >
+                    <Text style={styles.dayNumber}>{dayData.day}</Text>
+                    <Text
+                      style={[
+                        styles.dayAmount,
+                        {
+                          color:
+                            dayData.amount === 0 && !dayData.hasRecord
+                              ? "#666"
+                              : color,
+                        },
+                      ]}
+                    >
+                      {dayData.amount === 0 && !dayData.hasRecord
+                        ? "+0.00"
+                        : Math.abs(dayData.amount) >= 10000
+                        ? formatWan(dayData.amount)
+                        : formatNTD(dayData.amount)}
+                    </Text>
+                    <Text
+                      style={[
+                        styles.dayPercent,
+                        {
+                          color:
+                            dayData.amount === 0 && !dayData.hasRecord
+                              ? "#666"
+                              : color,
+                        },
+                      ]}
+                    >
+                      {dayData.amount === 0 && !dayData.hasRecord
+                        ? "+0.00%"
+                        : formatPercent(dayData.percent)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </>
+          ) : (
+            /* Year View - 12 months */
+            monthlyStats.yearData?.map((monthData) => {
+              const isProfit = monthData.amount >= 0;
+              const color = isProfit ? "#00C853" : "#FF5252";
+              const monthNames = [
+                "1月",
+                "2月",
+                "3月",
+                "4月",
+                "5月",
+                "6月",
+                "7月",
+                "8月",
+                "9月",
+                "10月",
+                "11月",
+                "12月",
+              ];
+
+              return (
+                <TouchableOpacity
+                  key={monthData.month}
+                  style={styles.monthCell}
+                  onPress={() => handleMonthPress(monthData.month)}
+                  activeOpacity={0.7}
                 >
-                  {dayData.amount === 0 && !dayData.hasRecord
-                    ? "+0.00"
-                    : Math.abs(dayData.amount) >= 10000
-                    ? formatWan(dayData.amount)
-                    : formatNTD(dayData.amount)}
-                </Text>
-                <Text
-                  style={[
-                    styles.dayPercent,
-                    {
-                      color:
-                        dayData.amount === 0 && !dayData.hasRecord
-                          ? "#666"
-                          : color,
-                    },
-                  ]}
-                >
-                  {dayData.amount === 0 && !dayData.hasRecord
-                    ? "+0.00%"
-                    : formatPercent(dayData.percent)}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
+                  <Text style={styles.monthNumber}>
+                    {monthNames[monthData.month - 1]}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.monthAmount,
+                      {
+                        color:
+                          monthData.amount === 0 && !monthData.hasRecord
+                            ? "#666"
+                            : color,
+                      },
+                    ]}
+                  >
+                    {monthData.amount === 0 && !monthData.hasRecord
+                      ? "+0.00"
+                      : Math.abs(monthData.amount) >= 10000
+                      ? formatWan(monthData.amount)
+                      : formatNTD(monthData.amount)}
+                  </Text>
+                  <Text
+                    style={[
+                      styles.monthPercent,
+                      {
+                        color:
+                          monthData.amount === 0 && !monthData.hasRecord
+                            ? "#666"
+                            : color,
+                      },
+                    ]}
+                  >
+                    {monthData.amount === 0 && !monthData.hasRecord
+                      ? "+0.00%"
+                      : formatPercent(monthData.percent)}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })
+          )}
         </View>
 
         {/* Bar Chart */}
         <View style={styles.chartContainer}>
-          <Text style={styles.chartLabel}>單位：萬</Text>
           <View style={styles.chart}>
-            {monthlyStats.dailyData.map((dayData, idx) => {
+            {(viewMode === "month"
+              ? monthlyStats.dailyData
+              : monthlyStats.yearData
+            )?.map((data, idx) => {
               const height =
-                (Math.abs(dayData.amount) / monthlyStats.maxAmount) * 80;
-              const isProfit = dayData.amount >= 0;
-              const color = isProfit ? "#00C853" : "#FF5252";
+                (Math.abs(data.amount) / monthlyStats.maxAmount) * 80;
+              const isProfit = data.amount > 0;
+              const isLoss = data.amount < 0;
+              const isNoChange = data.amount === 0;
+
+              // 設定顏色：正收益綠色、負收益紅色、無變化灰色
+              let color;
+              if (isNoChange) {
+                color = "#666"; // 灰色
+              } else if (isProfit) {
+                color = "#00C853"; // 綠色
+              } else {
+                color = "#FF5252"; // 紅色
+              }
               const bottom = isProfit ? 50 : 50 - height;
 
               return (
@@ -299,13 +446,6 @@ export default function Dashboard() {
                 </View>
               );
             })}
-            {/* Zero line */}
-            <View style={styles.zeroLine} />
-          </View>
-          <View style={styles.yAxis}>
-            <Text style={styles.yAxisText}>9.01</Text>
-            <Text style={styles.yAxisText}>0.00</Text>
-            <Text style={styles.yAxisText}>-9.01</Text>
           </View>
         </View>
       </ScrollView>
@@ -519,28 +659,46 @@ const styles = StyleSheet.create({
     justifyContent: "flex-start",
     alignItems: "center",
   },
+  monthCell: {
+    width: "33.33%",
+    height: 100,
+    padding: 8,
+    justifyContent: "flex-start",
+    alignItems: "center",
+    marginBottom: 8,
+  },
   dayNumber: {
     color: "#fff",
     fontSize: 14,
     marginBottom: 4,
   },
+  monthNumber: {
+    color: "#fff",
+    fontSize: 16,
+    marginBottom: 6,
+    fontWeight: "600",
+  },
   dayAmount: {
     fontSize: 11,
     fontWeight: "500",
   },
+  monthAmount: {
+    fontSize: 12,
+    fontWeight: "500",
+    marginBottom: 2,
+  },
   dayPercent: {
     fontSize: 10,
+    marginTop: 2,
+  },
+  monthPercent: {
+    fontSize: 11,
     marginTop: 2,
   },
   chartContainer: {
     marginTop: 24,
     paddingHorizontal: 16,
     paddingBottom: 32,
-  },
-  chartLabel: {
-    color: "#999",
-    fontSize: 12,
-    marginBottom: 8,
   },
   chart: {
     height: 120,
@@ -560,26 +718,6 @@ const styles = StyleSheet.create({
     width: 8,
     borderRadius: 2,
     position: "absolute",
-  },
-  zeroLine: {
-    position: "absolute",
-    left: 0,
-    right: 0,
-    height: 1,
-    backgroundColor: "#444",
-    top: 50,
-  },
-  yAxis: {
-    position: "absolute",
-    left: 0,
-    top: 0,
-    bottom: 0,
-    justifyContent: "space-between",
-    width: 40,
-  },
-  yAxisText: {
-    color: "#666",
-    fontSize: 10,
   },
   modalOverlay: {
     flex: 1,
