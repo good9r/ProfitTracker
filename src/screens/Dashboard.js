@@ -362,9 +362,10 @@ export default function Dashboard() {
       {/* Capital Settings - Only show in year view */}
       {viewMode === "year" && (
         <View style={styles.capitalSection}>
-          <View style={styles.capitalInfo}>
-            <Text style={styles.capitalLabel}>
-              本金：{formatNTD(baseCapital)}
+          <View style={styles.assetInfo}>
+            <Text style={styles.assetText}>
+              總資產 {formatNTD(baseCapital + (monthlyStats.totalProfit || 0))}{" "}
+              本金 {formatNTD(baseCapital)}
             </Text>
             <TouchableOpacity
               style={styles.capitalButton}
@@ -741,6 +742,15 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
+  },
+  assetInfo: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  assetText: {
+    color: "#999",
+    fontSize: 12,
   },
   capitalLabel: {
     color: "#999",

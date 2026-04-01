@@ -22,6 +22,8 @@ export function formatNTD(num) {
     style: "currency",
     currency: "TWD",
     signDisplay: "never",
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   }).format(absNum);
 }
 
