@@ -92,6 +92,48 @@ export function useProfitData() {
     }
   }, []);
 
+  const exportData = useCallback(() => {
+    const exportData = {
+      ...data,
+      exportDate: new Date().toISOString(),
+      version: "1.0",
+    };
+    return JSON.stringify(exportData, null, 2);
+  }, [data]);
+
+  const importData = useCallback(
+    async (jsonString) => {
+      try {
+        const importedData = JSON.parse(jsonString);
+
+        // 验证数据结构
+        if (!importedData.settings || !importedData.records) {
+          throw new Error("Invalid data format");
+        }
+
+        // 合并数据（保留现有数据，添加导入的数据）
+        const mergedData = {
+          settings: {
+            ...data.settings,
+            ...importedData.settings,
+          },
+          records: {
+            ...data.records,
+            ...importedData.records,
+          },
+        };
+
+        setData(mergedData);
+        await persistData(mergedData);
+        return true;
+      } catch (e) {
+        console.error("Failed to import data", e);
+        return false;
+      }
+    },
+    [data, persistData]
+  );
+
   return {
     records: data.records,
     baseCapital: data.settings.base_capital,
@@ -100,5 +142,7 @@ export function useProfitData() {
     deleteRecord,
     updateBaseCapital,
     clearAllData,
+    exportData,
+    importData,
   };
 }

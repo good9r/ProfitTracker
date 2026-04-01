@@ -42,6 +42,8 @@ export default function Dashboard() {
     deleteRecord,
     updateBaseCapital,
     clearAllData,
+    exportData,
+    importData,
   } = useProfitData();
 
   // 計算當月統計
@@ -223,6 +225,37 @@ export default function Dashboard() {
       await clearAllData();
       setShowSettings(false);
       setBaseCapitalInput("");
+    }
+  };
+
+  const handleExportData = () => {
+    const dataString = exportData();
+    const blob = new Blob([dataString], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = `profit_tracker_backup_${
+      new Date().toISOString().split("T")[0]
+    }.json`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleImportData = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = async (e) => {
+        const success = await importData(e.target.result);
+        if (success) {
+          alert("數據導入成功！");
+        } else {
+          alert("數據導入失敗，請檢查文件格式。");
+        }
+      };
+      reader.readAsText(file);
     }
   };
 
@@ -635,6 +668,32 @@ export default function Dashboard() {
               <Text style={styles.btnClearText}>清除所有數據</Text>
             </TouchableOpacity>
 
+            <View style={styles.dataManagementSection}>
+              <Text style={styles.sectionTitle}>數據管理</Text>
+
+              <TouchableOpacity
+                style={styles.btnExport}
+                onPress={handleExportData}
+              >
+                <Text style={styles.btnExportText}>導出數據</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.btnImport}
+                onPress={() => document.getElementById("import-file").click()}
+              >
+                <Text style={styles.btnImportText}>導入數據</Text>
+              </TouchableOpacity>
+
+              <input
+                id="import-file"
+                type="file"
+                accept=".json"
+                style={{ display: "none" }}
+                onChange={handleImportData}
+              />
+            </View>
+
             <View style={styles.modalButtons}>
               <TouchableOpacity
                 style={styles.btnCancel}
@@ -996,6 +1055,40 @@ const styles = StyleSheet.create({
   },
   btnClearText: {
     color: "#FF5252",
+    fontWeight: "500",
+  },
+  dataManagementSection: {
+    marginTop: 16,
+    paddingTop: 16,
+    borderTopWidth: 1,
+    borderTopColor: "#2A2A2A",
+  },
+  sectionTitle: {
+    color: "#999",
+    fontSize: 14,
+    marginBottom: 12,
+    fontWeight: "500",
+  },
+  btnExport: {
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: "#00C853",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  btnExportText: {
+    color: "#000",
+    fontWeight: "500",
+  },
+  btnImport: {
+    padding: 12,
+    borderRadius: 8,
+    backgroundColor: "#2196F3",
+    alignItems: "center",
+    marginBottom: 8,
+  },
+  btnImportText: {
+    color: "#fff",
     fontWeight: "500",
   },
   yearPickerScroll: {
