@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { format, getDaysInMonth, startOfMonth, getDay } from "date-fns";
 import { useProfitData } from "../hooks/useProfitData";
+import AnalyticsScreen from "./AnalyticsScreen";
 import {
   formatWan,
   formatUSD,
@@ -29,6 +30,7 @@ export default function Dashboard() {
   const [showSettings, setShowSettings] = useState(false);
   const [baseCapitalInput, setBaseCapitalInput] = useState("");
   const [showYearPicker, setShowYearPicker] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
 
   const yearPickerScrollRef = useRef(null);
 
@@ -307,6 +309,10 @@ export default function Dashboard() {
     }
   }, [showYearPicker, year, years]);
 
+  if (showAnalytics) {
+    return <AnalyticsScreen onBack={() => setShowAnalytics(false)} />;
+  }
+
   return (
     <View style={styles.container}>
       {/* Header */}
@@ -400,12 +406,20 @@ export default function Dashboard() {
               總資產 {formatNTD(baseCapital + (monthlyStats.totalProfit || 0))}{" "}
               本金 {formatNTD(baseCapital)}
             </Text>
-            <TouchableOpacity
-              style={styles.capitalButton}
-              onPress={() => setShowSettings(true)}
-            >
-              <Text style={styles.capitalButtonText}>設定</Text>
-            </TouchableOpacity>
+            <View style={styles.assetButtons}>
+              <TouchableOpacity
+                style={styles.analyticsButton}
+                onPress={() => setShowAnalytics(true)}
+              >
+                <Text style={styles.analyticsButtonText}>數據分析</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.capitalButton}
+                onPress={() => setShowSettings(true)}
+              >
+                <Text style={styles.capitalButtonText}>設定</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
       )}
@@ -822,6 +836,22 @@ const styles = StyleSheet.create({
     borderRadius: 6,
   },
   capitalButtonText: {
+    color: "#fff",
+    fontSize: 12,
+    fontWeight: "500",
+  },
+  assetButtons: {
+    flexDirection: "row",
+    alignItems: "center",
+  },
+  analyticsButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    backgroundColor: "#2A2A2A",
+    borderRadius: 6,
+    marginRight: 8,
+  },
+  analyticsButtonText: {
     color: "#fff",
     fontSize: 12,
     fontWeight: "500",
