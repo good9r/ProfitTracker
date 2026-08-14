@@ -53,6 +53,86 @@ export default function AnalyticsScreen({ onBack }) {
     return { points, windowDays, spanDays, firstDate, lastDate };
   }, [records, baseCapital]);
 
+  // 交易統計：最大單日賺/賠、勝率、最大連續虧損天數、最大回撤（MDD，峰谷跌幅）
+  const statsData = useMemo(() => {
+    if (!seriesData) return null;
+    const { points } = seriesData;
+
+    // 最大單日賺 / 賠（只看有記錄的日子；沒有正/負紀錄時該項目維持 null）
+    let maxGainDay = null;
+    let maxLossDay = null;
+    let winCount = 0;
+    let recordCount = 0;
+    Object.entries(records).forEach(([date, r]) => {
+      recordCount += 1;
+      if (r.amount > 0) {
+        winCount += 1;
+        if (!maxGainDay || r.amount > maxGainDay.amount) maxGainDay = { date, amount: r.amount };
+      } else if (r.amount < 0) {
+        if (!maxLossDay || r.amount < maxLossDay.amount) maxLossDay = { date, amount: r.amount };
+      }
+    });
+    const winRate = recordCount > 0 ? (winCount / recordCount) * 100 : 0;
+
+    // 最大連續虧損天數：逐日走訪（含沒記錄的日子），沒記錄或非虧損都會中斷連續
+    let curStreak = 0;
+    let curStreakStart = null;
+    let bestStreak = 0;
+    let bestStreakStart = null;
+    let bestStreakEnd = null;
+    points.forEach((p) => {
+      const record = records[p.date];
+      const isLossDay = !!record && record.amount < 0;
+      if (isLossDay) {
+        if (curStreak === 0) curStreakStart = p.date;
+        curStreak += 1;
+        if (curStreak > bestStreak) {
+          bestStreak = curStreak;
+          bestStreakStart = curStreakStart;
+          bestStreakEnd = p.date;
+        }
+      } else {
+        curStreak = 0;
+      }
+    });
+
+    // 最大回撤 MDD：資產曲線從任一高點到之後最低點的最大跌幅（非連續虧損也算）
+    let peakValue = points[0].value;
+    let peakDate = points[0].date;
+    let maxDrawdown = 0;
+    let maxDrawdownPercent = 0;
+    let mddPeakDate = null;
+    let mddTroughDate = null;
+    points.forEach((p) => {
+      if (p.value > peakValue) {
+        peakValue = p.value;
+        peakDate = p.date;
+      }
+      const drawdown = peakValue - p.value;
+      if (drawdown > maxDrawdown) {
+        maxDrawdown = drawdown;
+        maxDrawdownPercent = peakValue > 0 ? (drawdown / peakValue) * 100 : 0;
+        mddPeakDate = peakDate;
+        mddTroughDate = p.date;
+      }
+    });
+
+    return {
+      maxGainDay,
+      maxLossDay,
+      winRate,
+      winCount,
+      recordCount,
+      bestStreak,
+      bestStreakStart,
+      bestStreakEnd,
+      maxDrawdown,
+      maxDrawdownPercent,
+      mddPeakDate,
+      mddTroughDate,
+    };
+  }, [seriesData, records]);
+
   if (!seriesData) {
     return (
       <View style={styles.container}>
@@ -73,6 +153,8 @@ export default function AnalyticsScreen({ onBack }) {
   }
 
   const { points, windowDays, spanDays, firstDate, lastDate } = seriesData;
+  const stats = statsData;
+  const md = (dateStr) => (dateStr ? format(parseISO(dateStr), "MM/dd") : "-");
 
   const allValues = [...points.map((p) => p.value), baseCapital];
   const maxValue = Math.max(...allValues);
@@ -255,6 +337,65 @@ export default function AnalyticsScreen({ onBack }) {
         <Text style={styles.helperText}>
           曲線從第一筆記錄當天開始，依「本金 + 累計每日損益」逐日計算；橫軸為第幾天，超出資料範圍的區間會留白。
         </Text>
+
+        {/* 交易統計 */}
+        <Text style={styles.chartTitle}>交易統計</Text>
+
+        {/* 最大回撤 MDD：資產曲線峰谷跌幅，獨立一張較大的卡片 */}
+        <View style={styles.mddCard}>
+          <Text style={styles.statLabel}>最大回撤（MDD）</Text>
+          <Text style={[styles.mddValue, styles.loss]}>
+            {formatNTD(stats.maxDrawdown)}
+          </Text>
+          <Text style={[styles.statSub, styles.loss]}>
+            {formatPercent(stats.maxDrawdownPercent).replace("+", "")}
+          </Text>
+          <Text style={styles.statDate}>
+            {stats.mddPeakDate ? `${md(stats.mddPeakDate)} 高點 → ${md(stats.mddTroughDate)} 低點` : "-"}
+          </Text>
+        </View>
+
+        <View style={styles.statsGrid}>
+          <View style={styles.statCard}>
+            <Text style={styles.statLabel}>最大單日虧損</Text>
+            <Text style={[styles.statValue, styles.loss]}>
+              {stats.maxLossDay ? formatNTD(stats.maxLossDay.amount) : "-"}
+            </Text>
+            <Text style={styles.statDate}>
+              {stats.maxLossDay ? md(stats.maxLossDay.date) : "-"}
+            </Text>
+          </View>
+
+          <View style={styles.statCard}>
+            <Text style={styles.statLabel}>最大單日獲利</Text>
+            <Text style={[styles.statValue, styles.profit]}>
+              {stats.maxGainDay ? `+${formatNTD(stats.maxGainDay.amount)}` : "-"}
+            </Text>
+            <Text style={styles.statDate}>
+              {stats.maxGainDay ? md(stats.maxGainDay.date) : "-"}
+            </Text>
+          </View>
+
+          <View style={styles.statCard}>
+            <Text style={styles.statLabel}>最大連續虧損天數</Text>
+            <Text style={[styles.statValue, styles.loss]}>
+              {stats.bestStreak > 0 ? `${stats.bestStreak} 天` : "-"}
+            </Text>
+            <Text style={styles.statDate}>
+              {stats.bestStreak > 0
+                ? `${md(stats.bestStreakStart)} ~ ${md(stats.bestStreakEnd)}`
+                : "-"}
+            </Text>
+          </View>
+
+          <View style={styles.statCard}>
+            <Text style={styles.statLabel}>勝率</Text>
+            <Text style={styles.statValue}>{formatPercent(stats.winRate).replace("+", "")}</Text>
+            <Text style={styles.statDate}>
+              {stats.winCount} / {stats.recordCount} 天
+            </Text>
+          </View>
+        </View>
       </ScrollView>
     </View>
   );
@@ -393,7 +534,52 @@ const styles = StyleSheet.create({
     fontSize: 12,
     paddingHorizontal: 16,
     paddingTop: 12,
-    paddingBottom: 32,
+    paddingBottom: 20,
     textAlign: "center",
+  },
+  mddCard: {
+    marginHorizontal: 16,
+    marginBottom: 12,
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: "#1E1E1E",
+  },
+  mddValue: {
+    fontSize: 22,
+    fontWeight: "bold",
+    marginTop: 4,
+  },
+  statsGrid: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    paddingHorizontal: 16,
+    paddingBottom: 32,
+    justifyContent: "space-between",
+  },
+  statCard: {
+    width: "48%",
+    padding: 14,
+    borderRadius: 12,
+    backgroundColor: "#1E1E1E",
+    marginBottom: 12,
+  },
+  statLabel: {
+    color: "#999",
+    fontSize: 12,
+  },
+  statValue: {
+    color: "#fff",
+    fontSize: 18,
+    fontWeight: "bold",
+    marginTop: 4,
+  },
+  statSub: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  statDate: {
+    color: "#666",
+    fontSize: 11,
+    marginTop: 6,
   },
 });
