@@ -39,3 +39,6 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# 測試用範例資料（供手動匯入 App 驗證效果，不進版控）
+/sample-data/
