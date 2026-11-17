@@ -34,3 +34,19 @@
 
 - repo 的 Pages 來源需設定為 **GitHub Actions**（Settings → Pages → Build and deployment → Source）。
 - 若 repo 改名，需同步修改 `app.json` 的 `baseUrl`。
+
+## 分支流程
+
+- `main`：只放要發布的版本，push 到 `main` 會觸發自動部署。
+- `develop`：日常開發的整合分支。
+- `feature/*`、`docs/*`：從 `develop` 開出，完成後合回 `develop`。
+
+發布步驟：
+
+```bash
+git switch main
+git merge --no-ff develop
+git push
+```
+
+緊急修復也先進 `develop` 再發布，避免 `main` 與 `develop` 分岔。
