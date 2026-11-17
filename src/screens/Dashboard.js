@@ -91,7 +91,6 @@ export default function Dashboard() {
           amount: monthProfit,
           percent: monthPercent,
           hasRecord: monthHasRecord,
-          totalAssets: currentAssets,
         });
       }
 
@@ -101,7 +100,6 @@ export default function Dashboard() {
           baseCapital > 0 ? (yearTotalProfit / baseCapital) * 100 : 0,
         yearData,
         maxAmount: Math.max(...yearData.map((m) => Math.abs(m.amount)), 1),
-        finalAssets: currentAssets,
       };
     } else {
       // 月視圖：需要計算到當前月份的累計資產
@@ -126,7 +124,7 @@ export default function Dashboard() {
         }
       }
 
-      let currentAssets = monthStartAssets; // 當月開始時的總資產
+      let currentAssets = monthStartAssets; // 當月開始時的累計資產
       const dailyData = [];
 
       for (let d = 1; d <= daysInMonth; d++) {
@@ -136,18 +134,18 @@ export default function Dashboard() {
         const record = records[dateKey];
         const amount = record ? record.amount : 0;
 
-        // 記錄當日開始時的資產（昨日總資產）
+        // 記錄當日開始時的資產（昨日累計資產）
         const dayStartAssets = currentAssets;
 
-        // 計算單日收益率 = 今日收益 / 昨日總資產 × 100
-        // 使用昨日總資產的絕對值來計算百分比，保持收益的正負號
+        // 計算單日收益率 = 今日收益 / 昨日累計資產 × 100
+        // 使用昨日累計資產的絕對值來計算百分比，保持收益的正負號
         const percent =
           Math.abs(dayStartAssets) > 0
             ? (amount / Math.abs(dayStartAssets)) * 100
             : 0;
 
         totalProfit += amount;
-        // 更新總資產：昨日總資產 + 今日收益
+        // 更新累計資產：昨日累計資產 + 今日收益
         currentAssets += amount;
 
         dailyData.push({
@@ -157,7 +155,6 @@ export default function Dashboard() {
           percent,
           hasRecord: !!record,
           note: record?.note || "",
-          totalAssets: currentAssets, // 新增總資產欄位
         });
       }
 
@@ -171,7 +168,6 @@ export default function Dashboard() {
         dailyData,
         padding,
         maxAmount: Math.max(...dailyData.map((d) => Math.abs(d.amount)), 1),
-        finalAssets: currentAssets, // 新增最終總資產
       };
     }
   }, [records, currentDate, baseCapital, year, month, viewMode]);
@@ -403,7 +399,6 @@ export default function Dashboard() {
         <View style={styles.capitalSection}>
           <View style={styles.assetInfo}>
             <Text style={styles.assetText}>
-              總資產 {formatNTD(baseCapital + (monthlyStats.totalProfit || 0))}{" "}
               本金 {formatNTD(baseCapital)}
             </Text>
             <View style={styles.assetButtons}>

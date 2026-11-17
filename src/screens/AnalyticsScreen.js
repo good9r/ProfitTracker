@@ -201,10 +201,6 @@ export default function AnalyticsScreen({ onBack }) {
         {/* Summary */}
         <View style={styles.summary}>
           <View style={styles.summaryItem}>
-            <Text style={styles.summaryLabel}>目前總資產</Text>
-            <Text style={styles.summaryValue}>{formatNTD(finalValue)}</Text>
-          </View>
-          <View style={styles.summaryItem}>
             <Text style={styles.summaryLabel}>本金</Text>
             <Text style={styles.summaryValue}>{formatNTD(baseCapital)}</Text>
           </View>
